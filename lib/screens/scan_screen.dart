@@ -17,6 +17,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
   List<BluetoothDevice> _devices = [];
   bool _isLoading = true;
   String _status = "Initializing Bluetooth...";
+  BluetoothDevice? _connectedDevice;
 
   @override
   void initState() {
@@ -100,20 +101,58 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                       final device = _devices[index];
 
                       return ListTile(
-                        leading: const Icon(
+                        leading: Icon(
                           Icons.bluetooth,
-                          color: Colors.blue,
+                          color: _connectedDevice?.address == device.address
+                              ? Colors.green
+                              : Colors.blue,
                         ),
                         title: Text(
                           device.name ?? "Unknown device",
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        subtitle: Text(device.address),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(device.address),
+                            if (_connectedDevice?.address == device.address)
+                              Container(
+                                margin: const EdgeInsets.only(top: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.2),
+                                  border: Border.all(color: Colors.green),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  '● Connected',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ColorPickerScreen(device: device),
+                              builder: (_) => ColorPickerScreen(
+                                device: device,
+                                onConnected: (connectedDevice) {
+                                  setState(() {
+                                    _connectedDevice = connectedDevice;
+                                  });
+                                },
+                                onDisconnected: () {
+                                  setState(() {
+                                    _connectedDevice = null;
+                                  });
+                                },
+                              ),
                             ),
                           );
                         },

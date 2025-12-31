@@ -4,8 +4,14 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'dart:typed_data';
 class ColorPickerScreen extends StatefulWidget {
   final BluetoothDevice device;
+  final Function(BluetoothDevice)? onConnected;
+  final Function()? onDisconnected;
 
-  ColorPickerScreen({required this.device});
+  ColorPickerScreen({
+    required this.device,
+    this.onConnected,
+    this.onDisconnected,
+  });
 
   @override
   _ColorPickerScreenState createState() => _ColorPickerScreenState();
@@ -15,6 +21,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
   BluetoothConnection? connection;
   Color selectedColor = Colors.red;
   String receivedData = '';
+  bool isConnected = false;
 
   @override
   void initState() {
@@ -27,13 +34,27 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
       BluetoothConnection connection = await BluetoothConnection.toAddress(device.address);
       setState(() {
         this.connection = connection;
+        isConnected = true;
       });
-      connection.input!.listen((data) {
-        setState(() {
-          receivedData += String.fromCharCodes(data);
-        });
-      });
+      widget.onConnected?.call(device);
+      
+      connection.input!.listen(
+        (data) {
+          setState(() {
+            receivedData += String.fromCharCodes(data);
+          });
+        },
+        onDone: () {
+          setState(() {
+            isConnected = false;
+          });
+          widget.onDisconnected?.call();
+        },
+      );
     } catch (error) {
+      setState(() {
+        isConnected = false;
+      });
       print('Cannot connect, exception occurred: $error');
     }
   }
@@ -49,6 +70,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
   @override
   void dispose() {
     connection?.dispose();
+    widget.onDisconnected?.call();
     super.dispose();
   }
 
@@ -56,7 +78,31 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Color Picker'),
+        title: Text('Color Picker - ${widget.device.name}'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Center(
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.circle,
+                    color: isConnected ? Colors.green : Colors.red,
+                    size: 12,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isConnected ? 'Connected' : 'Disconnected',
+                    style: TextStyle(
+                      color: isConnected ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
